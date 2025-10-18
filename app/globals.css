@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --ring: theme(colors.brand.500);
+}
+
+* { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+*:focus-visible { outline: 2px solid var(--ring); outline-offset: 3px; }
+
+/* Card + surface helpers */
+@layer components {
+  .card { @apply bg-white rounded-2xl shadow-soft p-4; }
+  .btn {
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-2 font-medium
+           bg-brand-600 text-white hover:bg-brand-700 focus-visible:outline-none
+           focus-visible:ring-2 focus-visible:ring-brand-500 active:translate-y-px
+           transition-colors disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .input {
+    @apply w-full rounded-xl border border-ink-300 bg-white px-3 py-2
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500;
+  }
+  .label { @apply text-sm text-ink-700; }
+  .kpi-title { @apply text-sm text-ink-500; }
+  .kpi-value { @apply text-kpi font-semibold; }
+  .kpi-sub { @apply text-xs text-ink-500; }
+}
