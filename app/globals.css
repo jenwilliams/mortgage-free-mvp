@@ -27,4 +27,10 @@
   .kpi-title { @apply text-sm text-ink-500; }
   .kpi-value { @apply text-kpi font-semibold; }
   .kpi-sub { @apply text-xs text-ink-500; }
+  
+  /* Quick utility shortcuts */
+  .input { @apply w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ink-300; }
+  .btn-primary { @apply inline-flex items-center rounded-xl bg-ink-700 px-4 py-2 text-white shadow-md hover:translate-y-[1px] transition; }
+  .btn-ghost { @apply inline-flex items-center rounded-xl border px-4 py-2; }
+  .shadow-soft { @apply shadow-[0_6px_24px_rgba(0,0,0,0.06)]; }
 }
