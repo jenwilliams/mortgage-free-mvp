@@ -27,7 +27,15 @@ function Welcome() {
           <li>Get a clear payoff date and savings estimate</li>
         </ul>
         <a href="/setup" className="mt-6 inline-flex btn-primary">Get started</a>
-        <p className="mt-3 text-xs text-slate-500">No sign-up needed. Your data stays on your device.</p>
+        <div className="mt-3 text-xs text-slate-500 space-y-1">
+          <p>No sign-up needed. Your data stays on your device.</p>
+          <ul className="mt-2 space-y-1 text-xs text-slate-400">
+            <li>• This tool assumes you have no other significant debts and have rainy day savings of 10% your annual income.</li>
+            <li>• This tool is for educational-use only and does not offer financial advice.</li>
+            <li>• Before making financial decisions, please seek advice from a Financial Advisor.</li>
+            <li>• Figures shown are estimates based on the information you enter and current market assumptions, which may change over time.</li>
+          </ul>
+        </div>
       </div>
     </div>
   );

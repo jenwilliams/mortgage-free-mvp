@@ -9,6 +9,9 @@ import {
   YAxis,
   Tooltip,
   Legend,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 
 type Form = {
@@ -17,6 +20,7 @@ type Form = {
   years: number;
   months: number;
   overpay?: number;  // £/mo
+  originalMortgage?: number;
 };
 
 // ---------- helpers ----------
@@ -109,6 +113,7 @@ export default function Dashboard() {
       years: data.years,
       months: data.months,
       overpay: data.overpay ?? 0,
+      originalMortgage: data.originalMortgage ?? 0,
     });
   }, []);
 
@@ -151,9 +156,156 @@ export default function Dashboard() {
 
   const onNum = (v: string) => Number(v.replace(/[^\d.]/g, "") || 0);
 
+  // Calculate mortgage progress
+  const originalMortgage = form.originalMortgage || 0;
+  const currentBalance = form.balance || 0;
+  const paidOff = originalMortgage > 0 ? Math.max(0, originalMortgage - currentBalance) : 0;
+  const mortgageProgress = originalMortgage > 0 ? Math.min(100, Math.max(0, (paidOff / originalMortgage) * 100)) : 0;
+  
+  // Donut chart data - ensure we have valid data for the chart
+  const donutData = originalMortgage > 0 && paidOff > 0 ? [
+    { name: 'Paid Off', value: paidOff, color: '#10b981' },
+    { name: 'Remaining', value: currentBalance, color: '#e5e7eb' }
+  ] : originalMortgage > 0 ? [
+    { name: 'Remaining', value: currentBalance, color: '#e5e7eb' }
+  ] : [
+    { name: 'Current Balance', value: currentBalance || 1, color: '#e5e7eb' }
+  ];
+
   return (
     <div className="p-6 mx-auto max-w-6xl space-y-6">
-      <h1 className="text-2xl font-semibold">Your payoff plan</h1>
+      <h1 className="text-2xl font-semibold">Mortgage-free plan</h1>
+
+      {/* --- Progress Donut Chart --- */}
+      <section className="grid gap-4 md:grid-cols-4">
+        <div className="md:col-span-1">
+          <div className="rounded-2xl bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.06)]">
+            <h3 className="text-sm font-medium text-slate-700 mb-3">Mortgage Progress</h3>
+            <div className="relative w-32 h-32 mx-auto">
+              {donutData.length > 0 && donutData[0].value > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={donutData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={40}
+                      outerRadius={60}
+                      dataKey="value"
+                      startAngle={90}
+                      endAngle={450}
+                    >
+                      {donutData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center border-2 border-dashed border-slate-300 rounded-full">
+                  <div className="text-slate-400 text-xs text-center">
+                    No data
+                  </div>
+                </div>
+              )}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-slate-900">
+                    {originalMortgage > 0 ? Math.round(mortgageProgress) : '—'}%
+                  </div>
+                  <div className="text-xs text-slate-500">mortgage-free</div>
+                </div>
+              </div>
+            </div>
+            {originalMortgage > 0 ? (
+              <p className="text-xs text-slate-500 text-center mt-2">
+                £{Math.round(paidOff).toLocaleString()} paid off out of £{originalMortgage.toLocaleString()}
+              </p>
+            ) : (
+              <p className="text-xs text-slate-500 text-center mt-2">
+                Add original mortgage value to see progress
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* --- Years Saved Card --- */}
+        <div className="md:col-span-1">
+          <div className="rounded-2xl bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.06)] text-center">
+            <h3 className="text-sm font-medium text-slate-700 mb-2">Time Saved</h3>
+            <div className="text-4xl font-bold text-emerald-700 mb-1">
+              {computed.savedTime.y > 0 || computed.savedTime.m > 0 
+                ? `${computed.savedTime.y}y ${computed.savedTime.m}m` 
+                : '0y 0m'}
+            </div>
+            <p className="text-sm text-slate-600">
+              New pay-off date {computed.overDate}
+            </p>
+          </div>
+        </div>
+
+        {/* --- Interest Saved Card --- */}
+        <div className="md:col-span-1">
+          <div className="rounded-2xl bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.06)] text-center">
+            <h3 className="text-sm font-medium text-slate-700 mb-2">Interest Saved</h3>
+            <div className="text-2xl font-bold text-slate-900">
+              £{computed.interestSaved.toLocaleString()}
+            </div>
+            <p className="text-sm text-slate-600">
+              vs current plan
+            </p>
+          </div>
+        </div>
+
+        {/* --- Mortgage Details Card --- */}
+        <div className="md:col-span-1">
+          <div className="rounded-2xl bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.06)]">
+            <h3 className="text-sm font-medium text-slate-700 mb-3">Mortgage Details</h3>
+            <div className="space-y-2 text-sm">
+              <div>
+                <span className="text-slate-500">Rate:</span>
+                <span className="ml-2 font-medium">{form.rate}% APR</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Balance:</span>
+                <span className="ml-2 font-medium">£{form.balance.toLocaleString()}</span>
+              </div>
+            </div>
+            <button 
+              className="mt-3 w-full btn-ghost text-sm"
+              onClick={() => window.location.href = '/setup'}
+            >
+              Edit Details
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* --- Action Cards --- */}
+      <section className="grid gap-4 md:grid-cols-2">
+        {/* One-off Payment Card */}
+        <div className="rounded-2xl bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.06)]">
+          <h3 className="text-sm font-medium text-slate-700 mb-2">Make a one-off payment</h3>
+          <p className="text-sm text-slate-600 mb-3">
+            Adding a one-off payment from your savings or a bonus can make you mortgage-free sooner.
+          </p>
+          <button className="btn-primary w-full">Add One-off Payment</button>
+        </div>
+
+        {/* Did You Know Card */}
+        <div className="rounded-2xl bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.06)] relative">
+          <button 
+            className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
+            onClick={() => {/* Add dismiss logic */}}
+          >
+            ×
+          </button>
+          <h3 className="text-sm font-medium text-slate-700 mb-2">Did you know?</h3>
+          <p className="text-sm text-slate-600">
+            Even small overpayments can save thousands in interest. A £100/month overpayment on a £200k mortgage can save over £30k in interest and pay it off 8 years early!
+          </p>
+        </div>
+      </section>
 
       {/* --- Prefilled, editable form --- */}
       <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -236,29 +388,6 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* --- Motivating stats --- */}
-      <section className="grid gap-4 md:grid-cols-3">
-        <Card 
-          title="Without Overpayments"
-          label="You'll be mortgage free by" 
-          value={computed.baseDate} 
-        />
-        <Card
-          title="With Overpayments"
-          label={`With £${form.overpay || 0} overpayment you'll be mortgage free by`}
-          value={computed.overDate}
-          sub={
-            computed.savedMonths > 0
-              ? `Save ${computed.savedTime.y}y ${computed.savedTime.m}m`
-              : "—"
-          }
-        />
-        <Card
-          title="Interest Saved"
-          label="Total interest saved"
-          value={`£${computed.interestSaved.toLocaleString()}`}
-        />
-      </section>
 
       {/* --- Chart: current vs overpayment --- */}
       <section className="rounded-2xl bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.06)]">
@@ -394,13 +523,3 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Card({ title, label, value, sub }: { title?: string; label: string; value: string; sub?: string }) {
-  return (
-    <div className="rounded-2xl bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.06)]">
-      {title && <h3 className="text-base font-semibold text-slate-900 mb-2">{title}</h3>}
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold">{value}</p>
-      {sub && <p className="text-xs text-emerald-700 mt-1">{sub}</p>}
-    </div>
-  );
-}

@@ -1,11 +1,11 @@
 "use client";
 import { useState } from "react";
 
-type Form = { balance:number; rate:number; years:number; months:number; overpay?:number; penaltyLimit?:number };
+type Form = { balance:number; rate:number; years:number; months:number; overpay?:number; penaltyLimit?:number; houseValue?:number; originalMortgage?:number };
 
 export default function SetupPage() {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState<Form>({ balance: 0, rate: 0, years: 25, months: 0, overpay: 0, penaltyLimit: 10 });
+  const [form, setForm] = useState<Form>({ balance: 0, rate: 0, years: 25, months: 0, overpay: 50, penaltyLimit: 10, houseValue: 0, originalMortgage: 0 });
 
   const save = () => {
     localStorage.setItem("mortgageData", JSON.stringify(form));
@@ -40,7 +40,9 @@ function Basics({ form, setForm, onNext }:{
   form:Form; setForm:(f:Form)=>void; onNext:()=>void
 }) {
   return (
-    <form className="mt-6 space-y-4" onSubmit={(e)=>{e.preventDefault(); onNext();}}>
+    <div className="mt-6">
+      <h2 className="text-lg font-semibold mb-4">First, tell me about your current mortgage</h2>
+      <form className="space-y-4" onSubmit={(e)=>{e.preventDefault(); onNext();}}>
       <div>
         <label className="block text-sm font-medium">Mortgage balance (£)</label>
         <input type="number" inputMode="decimal" required className="input" value={form.balance || ''}
@@ -75,10 +77,27 @@ function Basics({ form, setForm, onNext }:{
         <p className="mt-1 text-xs text-slate-500">Most UK mortgages allow 10% overpayment per year without penalty.</p>
       </div>
 
-      <div className="flex justify-end">
-        <button className="btn-primary" type="submit">Next</button>
+      <div className="grid md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium">House value (£) — optional</label>
+          <input type="number" min="0" step="1000" className="input" value={form.houseValue || ''}
+                 onChange={e=>setForm({...form, houseValue:Number(e.target.value)})}/>
+          <p className="mt-1 text-xs text-slate-500">Current estimated value of your property.</p>
+        </div>
+        <div>
+          <label className="block text-sm font-medium">Original mortgage value (£) — optional</label>
+          <input type="number" min="0" step="1000" className="input" value={form.originalMortgage || ''}
+                 onChange={e=>setForm({...form, originalMortgage:Number(e.target.value)})}/>
+          <p className="mt-1 text-xs text-slate-500">The original amount you borrowed.</p>
+        </div>
       </div>
-    </form>
+
+
+        <div className="flex justify-end">
+          <button className="btn-primary" type="submit">Next</button>
+        </div>
+      </form>
+    </div>
   );
 }
 
@@ -110,7 +129,9 @@ function Overpay({ form, setForm, onBack, onNext }:{
   };
 
   return (
-    <form className="mt-6 space-y-6" onSubmit={(e)=>{e.preventDefault(); onNext();}}>
+    <div className="mt-6">
+      <h2 className="text-lg font-semibold mb-4">Thanks! Now let me know how much could you overpay each month.</h2>
+      <form className="space-y-6" onSubmit={(e)=>{e.preventDefault(); onNext();}}>
       {/* Input Type Selection */}
       <div>
         <label className="block text-sm font-medium mb-3">Choose how to set your overpayment:</label>
@@ -176,11 +197,12 @@ function Overpay({ form, setForm, onBack, onNext }:{
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <button type="button" className="btn-ghost" onClick={onBack}>Back</button>
-        <button className="btn-primary" type="submit">Next</button>
-      </div>
-    </form>
+        <div className="flex items-center justify-between">
+          <button type="button" className="btn-ghost" onClick={onBack}>Back</button>
+          <button className="btn-primary" type="submit">Next</button>
+        </div>
+      </form>
+    </div>
   );
 }
 
@@ -195,6 +217,9 @@ function Review({ form, onBack, onSave }:{
         <Item k="Rate (APR)" v={`${form.rate}%`} />
         <Item k="Term" v={`${form.years}y ${form.months}m`} />
         <Item k="Penalty-free limit" v={`${form.penaltyLimit || 10}% per year`} />
+        {form.houseValue > 0 && <Item k="House value" v={`£${form.houseValue.toLocaleString()}`} />}
+        {form.originalMortgage > 0 && <Item k="Original mortgage" v={`£${form.originalMortgage.toLocaleString()}`} />}
+        {form.houseValue > 0 && form.balance > 0 && <Item k="Loan to Value (LTV)" v={`${Math.round((form.balance / form.houseValue) * 100 * 10) / 10}%`} />}
         <Item k="Overpayment" v={form.overpay ? `£${form.overpay}/mo` : '—'} />
       </dl>
       <div className="mt-4 flex items-center justify-between">
