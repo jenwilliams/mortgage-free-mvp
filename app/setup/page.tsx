@@ -1,11 +1,11 @@
 "use client";
 import { useState } from "react";
 
-type Form = { balance:number; rate:number; years:number; months:number; overpay?:number; penaltyLimit?:number; houseValue?:number; originalMortgage?:number };
+type Form = { balance:number; rate:number; years:number; months:number; overpay?:number; houseValue:number; originalMortgage:number; fixedRateEndMonth?:number; fixedRateEndYear?:number; isTracker?:boolean };
 
 export default function SetupPage() {
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState<Form>({ balance: 0, rate: 0, years: 25, months: 0, overpay: 50, penaltyLimit: 10, houseValue: 0, originalMortgage: 0 });
+  const [form, setForm] = useState<Form>({ balance: 0, rate: 0, years: 25, months: 0, overpay: 50, houseValue: 0, originalMortgage: 0, fixedRateEndMonth: 12, fixedRateEndYear: new Date().getFullYear() + 2, isTracker: false });
 
   const save = () => {
     localStorage.setItem("mortgageData", JSON.stringify(form));
@@ -44,7 +44,7 @@ function Basics({ form, setForm, onNext }:{
       <h2 className="text-lg font-semibold mb-4">First, tell me about your current mortgage</h2>
       <form className="space-y-4" onSubmit={(e)=>{e.preventDefault(); onNext();}}>
       <div>
-        <label className="block text-sm font-medium">Mortgage balance (£)</label>
+        <label className="block text-sm font-medium">Mortgage balance (£) *</label>
         <input type="number" inputMode="decimal" required className="input" value={form.balance || ''}
                onChange={e=>setForm({...form, balance:Number(e.target.value)})}/>
         <p className="mt-1 text-xs text-slate-500">Enter the remaining balance, not original loan.</p>
@@ -52,14 +52,14 @@ function Basics({ form, setForm, onNext }:{
 
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium">Interest rate (APR %)</label>
+          <label className="block text-sm font-medium">Interest rate (APR %) *</label>
           <input type="number" step="0.01" required className="input" value={form.rate || ''}
                  onChange={e=>setForm({...form, rate:Number(e.target.value)})}/>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium">Years</label>
-            <input type="number" min="0" className="input" value={form.years || ''}
+            <label className="block text-sm font-medium">Years *</label>
+            <input type="number" min="0" required className="input" value={form.years || ''}
                    onChange={e=>setForm({...form, years:Number(e.target.value)})}/>
           </div>
           <div>
@@ -70,26 +70,69 @@ function Basics({ form, setForm, onNext }:{
         </div>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium">Overpayment penalty limit (%)</label>
-        <input type="number" min="0" max="100" step="0.1" className="input" value={form.penaltyLimit || ''}
-               onChange={e=>setForm({...form, penaltyLimit:Number(e.target.value)})}/>
-        <p className="mt-1 text-xs text-slate-500">Most UK mortgages allow 10% overpayment per year without penalty.</p>
-      </div>
 
       <div className="grid md:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium">House value (£) — optional</label>
-          <input type="number" min="0" step="1000" className="input" value={form.houseValue || ''}
+          <label className="block text-sm font-medium">House value (£) *</label>
+          <input type="number" min="0" step="1000" required className="input" value={form.houseValue || ''}
                  onChange={e=>setForm({...form, houseValue:Number(e.target.value)})}/>
           <p className="mt-1 text-xs text-slate-500">Current estimated value of your property.</p>
         </div>
         <div>
-          <label className="block text-sm font-medium">Original mortgage value (£) — optional</label>
-          <input type="number" min="0" step="1000" className="input" value={form.originalMortgage || ''}
+          <label className="block text-sm font-medium">Original mortgage value (£) *</label>
+          <input type="number" min="0" step="1000" required className="input" value={form.originalMortgage || ''}
                  onChange={e=>setForm({...form, originalMortgage:Number(e.target.value)})}/>
           <p className="mt-1 text-xs text-slate-500">The original amount you borrowed.</p>
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium">When does your current fixed rate end? *</label>
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">Month</label>
+              <select className="input" value={form.fixedRateEndMonth || ''} 
+                      onChange={e=>setForm({...form, fixedRateEndMonth:Number(e.target.value)})}>
+                <option value="">Select month</option>
+                <option value="1">January</option>
+                <option value="2">February</option>
+                <option value="3">March</option>
+                <option value="4">April</option>
+                <option value="5">May</option>
+                <option value="6">June</option>
+                <option value="7">July</option>
+                <option value="8">August</option>
+                <option value="9">September</option>
+                <option value="10">October</option>
+                <option value="11">November</option>
+                <option value="12">December</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-slate-600 mb-1">Year</label>
+              <select className="input" value={form.fixedRateEndYear || ''}
+                      onChange={e=>setForm({...form, fixedRateEndYear:Number(e.target.value)})}>
+                <option value="">Select year</option>
+                {Array.from({length: 10}, (_, i) => {
+                  const year = new Date().getFullYear() + i;
+                  return <option key={year} value={year}>{year}</option>;
+                })}
+              </select>
+            </div>
+          </div>
+          <label className="flex items-center gap-2">
+            <input type="radio" name="rateType" checked={form.isTracker || false}
+                   onChange={e=>setForm({...form, isTracker: true})}/>
+            <span className="text-sm">I'm on a tracker mortgage</span>
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="radio" name="rateType" checked={!form.isTracker}
+                   onChange={e=>setForm({...form, isTracker: false})}/>
+            <span className="text-sm">I'm on a fixed rate mortgage</span>
+          </label>
+        </div>
+        <p className="mt-1 text-xs text-slate-500">This helps us understand your rate risk.</p>
       </div>
 
 
@@ -216,10 +259,14 @@ function Review({ form, onBack, onSave }:{
         <Item k="Balance" v={`£${form.balance.toLocaleString()}`} />
         <Item k="Rate (APR)" v={`${form.rate}%`} />
         <Item k="Term" v={`${form.years}y ${form.months}m`} />
-        <Item k="Penalty-free limit" v={`${form.penaltyLimit || 10}% per year`} />
-        {form.houseValue > 0 && <Item k="House value" v={`£${form.houseValue.toLocaleString()}`} />}
-        {form.originalMortgage > 0 && <Item k="Original mortgage" v={`£${form.originalMortgage.toLocaleString()}`} />}
+        <Item k="House value" v={`£${form.houseValue.toLocaleString()}`} />
+        <Item k="Original mortgage" v={`£${form.originalMortgage.toLocaleString()}`} />
         {form.houseValue > 0 && form.balance > 0 && <Item k="Loan to Value (LTV)" v={`${Math.round((form.balance / form.houseValue) * 100 * 10) / 10}%`} />}
+        {form.isTracker ? (
+          <Item k="Rate type" v="Tracker mortgage" />
+        ) : (
+          <Item k="Fixed rate ends" v={`${form.fixedRateEndMonth ? new Date(0, form.fixedRateEndMonth - 1).toLocaleString('default', { month: 'long' }) : ''} ${form.fixedRateEndYear || ''}`} />
+        )}
         <Item k="Overpayment" v={form.overpay ? `£${form.overpay}/mo` : '—'} />
       </dl>
       <div className="mt-4 flex items-center justify-between">

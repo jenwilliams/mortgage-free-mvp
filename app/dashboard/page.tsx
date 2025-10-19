@@ -12,6 +12,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  ReferenceLine,
 } from "recharts";
 
 type Form = {
@@ -21,6 +22,10 @@ type Form = {
   months: number;
   overpay?: number;  // £/mo
   originalMortgage?: number;
+  houseValue?: number;
+  fixedRateEndMonth?: number;
+  fixedRateEndYear?: number;
+  isTracker?: boolean;
 };
 
 // ---------- helpers ----------
@@ -114,6 +119,10 @@ export default function Dashboard() {
       months: data.months,
       overpay: data.overpay ?? 0,
       originalMortgage: data.originalMortgage ?? 0,
+      houseValue: data.houseValue ?? 0,
+      fixedRateEndMonth: data.fixedRateEndMonth,
+      fixedRateEndYear: data.fixedRateEndYear,
+      isTracker: data.isTracker ?? false,
     });
   }, []);
 
@@ -154,7 +163,6 @@ export default function Dashboard() {
 
   if (!form || !computed) return null;
 
-  const onNum = (v: string) => Number(v.replace(/[^\d.]/g, "") || 0);
 
   // Calculate mortgage progress
   const originalMortgage = form.originalMortgage || 0;
@@ -174,13 +182,29 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 mx-auto max-w-6xl space-y-6">
-      <h1 className="text-2xl font-semibold">Mortgage-free plan</h1>
+      <h1 className="text-2xl font-semibold">Your Mortgage-free Plan</h1>
+      
+      <div className="mb-6 p-4 bg-gradient-to-r from-emerald-50 to-blue-50 rounded-xl border border-emerald-200">
+        <p className="text-lg font-medium text-slate-800">
+          Based on your new plan, you'll be mortgage-free in {(() => {
+            const monthsToClear = computed.withOver.monthsToClear;
+            const years = Math.floor(monthsToClear / 12);
+            const months = monthsToClear % 12;
+            return `${years} year${years !== 1 ? 's' : ''}${months > 0 ? ` and ${months} month${months !== 1 ? 's' : ''}` : ''}!`;
+          })()}
+        </p>
+        {computed.savedMonths > 0 && (
+          <p className="text-sm text-slate-600 mt-1">
+            That's {computed.savedTime.y > 0 ? computed.savedTime.y + ' years and ' : ''}{computed.savedTime.m} months earlier than your current plan!
+          </p>
+        )}
+      </div>
 
       {/* --- Progress Donut Chart --- */}
       <section className="grid gap-4 md:grid-cols-4">
         <div className="md:col-span-1">
           <div className="rounded-2xl bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.06)]">
-            <h3 className="text-sm font-medium text-slate-700 mb-3">Mortgage Progress</h3>
+            <h3 className="text-sm font-medium text-slate-700 mb-3">Your progress</h3>
             <div className="relative w-32 h-32 mx-auto">
               {donutData.length > 0 && donutData[0].value > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
@@ -218,9 +242,12 @@ export default function Dashboard() {
               </div>
             </div>
             {originalMortgage > 0 ? (
-              <p className="text-xs text-slate-500 text-center mt-2">
-                £{Math.round(paidOff).toLocaleString()} paid off out of £{originalMortgage.toLocaleString()}
-              </p>
+              <div className="text-xs text-slate-500 text-center mt-2 space-y-1">
+                <p>£{Math.round(paidOff).toLocaleString()} paid off out of £{originalMortgage.toLocaleString()}</p>
+                {form.houseValue && form.houseValue > 0 && (
+                  <p>LTV: {Math.round((form.balance / form.houseValue) * 100 * 10) / 10}%</p>
+                )}
+              </div>
             ) : (
               <p className="text-xs text-slate-500 text-center mt-2">
                 Add original mortgage value to see progress
@@ -232,7 +259,7 @@ export default function Dashboard() {
         {/* --- Years Saved Card --- */}
         <div className="md:col-span-1">
           <div className="rounded-2xl bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.06)] text-center">
-            <h3 className="text-sm font-medium text-slate-700 mb-2">Time Saved</h3>
+            <h3 className="text-sm font-medium text-slate-700 mb-2">Projected time saved</h3>
             <div className="text-4xl font-bold text-emerald-700 mb-1">
               {computed.savedTime.y > 0 || computed.savedTime.m > 0 
                 ? `${computed.savedTime.y}y ${computed.savedTime.m}m` 
@@ -247,12 +274,12 @@ export default function Dashboard() {
         {/* --- Interest Saved Card --- */}
         <div className="md:col-span-1">
           <div className="rounded-2xl bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.06)] text-center">
-            <h3 className="text-sm font-medium text-slate-700 mb-2">Interest Saved</h3>
+            <h3 className="text-sm font-medium text-slate-700 mb-2">Projected interest saved</h3>
             <div className="text-2xl font-bold text-slate-900">
               £{computed.interestSaved.toLocaleString()}
             </div>
             <p className="text-sm text-slate-600">
-              vs current plan
+              vs original
             </p>
           </div>
         </div>
@@ -270,6 +297,19 @@ export default function Dashboard() {
                 <span className="text-slate-500">Balance:</span>
                 <span className="ml-2 font-medium">£{form.balance.toLocaleString()}</span>
               </div>
+              {form.isTracker ? (
+                <div>
+                  <span className="text-slate-500">Type:</span>
+                  <span className="ml-2 font-medium">Tracker</span>
+                </div>
+              ) : (
+                <div>
+                  <span className="text-slate-500">Fixed until:</span>
+                  <span className="ml-2 font-medium">
+                    {form.fixedRateEndMonth ? new Date(0, form.fixedRateEndMonth - 1).toLocaleString('default', { month: 'short' }) : ''} {form.fixedRateEndYear || ''}
+                  </span>
+                </div>
+              )}
             </div>
             <button 
               className="mt-3 w-full btn-ghost text-sm"
@@ -282,116 +322,51 @@ export default function Dashboard() {
       </section>
 
       {/* --- Action Cards --- */}
-      <section className="grid gap-4 md:grid-cols-2">
-        {/* One-off Payment Card */}
+      <section className="grid gap-4 md:grid-cols-1">
+
+        {/* Monthly Overpayment Adjustment Card */}
         <div className="rounded-2xl bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.06)]">
-          <h3 className="text-sm font-medium text-slate-700 mb-2">Make a one-off payment</h3>
-          <p className="text-sm text-slate-600 mb-3">
-            Adding a one-off payment from your savings or a bonus can make you mortgage-free sooner.
-          </p>
-          <button className="btn-primary w-full">Add One-off Payment</button>
-        </div>
-
-        {/* Did You Know Card */}
-        <div className="rounded-2xl bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.06)] relative">
-          <button 
-            className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
-            onClick={() => {/* Add dismiss logic */}}
-          >
-            ×
-          </button>
-          <h3 className="text-sm font-medium text-slate-700 mb-2">Did you know?</h3>
-          <p className="text-sm text-slate-600">
-            Even small overpayments can save thousands in interest. A £100/month overpayment on a £200k mortgage can save over £30k in interest and pay it off 8 years early!
-          </p>
-        </div>
-      </section>
-
-      {/* --- Prefilled, editable form --- */}
-      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Field label="Mortgage balance (£)">
-          <input
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ink-300"
-            inputMode="decimal"
-            value={form.balance}
-            onChange={(e) =>
-              setForm({ ...form, balance: onNum(e.target.value) })
-            }
-          />
-        </Field>
-
-        <Field label="Interest rate (APR %)">
-          <input
-            className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ink-300"
-            type="number"
-            step="0.01"
-            value={form.rate}
-            onChange={(e) => setForm({ ...form, rate: Number(e.target.value) })}
-          />
-        </Field>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Years">
-            <input
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ink-300"
-              type="number"
-              min={0}
-              value={form.years}
-              onChange={(e) =>
-                setForm({ ...form, years: clamp(Number(e.target.value), 0, 50) })
-              }
-            />
-          </Field>
-          <Field label="Months">
-            <input
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ink-300"
-              type="number"
-              min={0}
-              max={11}
-              value={form.months}
-              onChange={(e) =>
-                setForm({ ...form, months: clamp(Number(e.target.value), 0, 11) })
-              }
-            />
-          </Field>
-        </div>
-
-        <div className="lg:col-span-1 md:col-span-2">
-          <Field label="Monthly overpayment (£)">
-            <input
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ink-300"
-              type="number"
-              min={0}
-              step={10}
-              value={form.overpay || 0}
-              onChange={(e) =>
-                setForm({ ...form, overpay: Math.max(0, Number(e.target.value)) })
-              }
-            />
-            <div className="mt-3">
+          <h3 className="text-sm font-medium text-slate-700 mb-3">Adjust my monthly overpayments</h3>
+          <div className="space-y-3">
+            <div>
+              <input
+                className="w-full rounded-xl border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ink-300"
+                type="number"
+                min={0}
+                step={25}
+                value={form.overpay || ''}
+                placeholder="0"
+                onChange={(e) => setForm({ ...form, overpay: Number(e.target.value) || 0 })}
+              />
+            </div>
+            <div>
               <input
                 className="w-full"
                 type="range"
                 min={0}
-                max={2000}
-                step={50}
+                max={Math.round(form.balance * 0.1 / 12)}
+                step={25}
                 value={form.overpay || 0}
-                onChange={(e) =>
-                  setForm({ ...form, overpay: Number(e.target.value) })
-                }
+                onChange={(e) => setForm({ ...form, overpay: Number(e.target.value) })}
               />
               <p className="mt-1 text-sm text-slate-600">
                 Current: <span className="font-medium">£{form.overpay || 0}</span>/month
               </p>
             </div>
-          </Field>
+          </div>
         </div>
       </section>
+
+      {/* --- Did You Know Card --- */}
+      <section>
+        <DidYouKnowCard />
+      </section>
+
 
 
       {/* --- Chart: current vs overpayment --- */}
       <section className="rounded-2xl bg-white p-4 shadow-[0_6px_24px_rgba(0,0,0,0.06)]">
-        <h2 className="text-lg font-semibold">Repayment schedule</h2>
+        <h2 className="text-lg font-semibold">Your Mortgage-free Plan</h2>
         <p className="text-sm text-slate-600">
           Compare your current schedule vs. adding an overpayment.
         </p>
@@ -420,8 +395,35 @@ export default function Dashboard() {
                 }
               />
               <Tooltip
-                formatter={(v: any) => `£${Math.round(v).toLocaleString()}`}
+                formatter={(v: any, name: string) => {
+                  if (name === 'Fixed rate ends') {
+                    return ['Consider remortgaging for better rates', name];
+                  }
+                  return [`£${Math.round(v).toLocaleString()}`, name];
+                }}
                 labelFormatter={(y: any) => `${y} years`}
+                content={(props: any) => {
+                  if (props.payload && props.payload[0]?.name === 'Fixed rate ends') {
+                    return (
+                      <div className="bg-white p-3 border border-slate-200 rounded-lg shadow-lg max-w-xs">
+                        <p className="text-sm font-medium text-amber-700 mb-1">Fixed rate ends</p>
+                        <p className="text-xs text-slate-600">
+                          You should consider a remortgage at this time to get the best interest rate.
+                        </p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="bg-white p-3 border border-slate-200 rounded-lg shadow-lg">
+                      <p className="text-sm font-medium">{props.labelFormatter?.(props.label)}</p>
+                      {props.payload?.map((entry: any, index: number) => (
+                        <p key={index} className="text-sm" style={{ color: entry.color }}>
+                          {entry.name}: £{Math.round(entry.value).toLocaleString()}
+                        </p>
+                      ))}
+                    </div>
+                  );
+                }}
               />
               <Legend />
               <Area
@@ -446,6 +448,7 @@ export default function Dashboard() {
             </AreaChart>
           </ResponsiveContainer>
         </div>
+        
       </section>
 
       {/* --- Data Table --- */}
@@ -462,6 +465,7 @@ export default function Dashboard() {
                 <th className="text-left py-3 px-2 font-medium text-slate-700">Year</th>
                 <th className="text-right py-3 px-2 font-medium text-slate-700">Without Overpayment</th>
                 <th className="text-right py-3 px-2 font-medium text-slate-700">With Overpayment</th>
+                <th className="text-right py-3 px-2 font-medium text-slate-700">% Mortgage Free with Overpayment</th>
               </tr>
             </thead>
             <tbody>
@@ -475,6 +479,11 @@ export default function Dashboard() {
                     </td>
                     <td className="py-3 px-2 text-right text-emerald-700 font-medium">
                       {row.overpay !== null ? `£${Math.round(row.overpay).toLocaleString()}` : '—'}
+                    </td>
+                    <td className="py-3 px-2 text-right text-emerald-700 font-medium">
+                      {form.originalMortgage && form.originalMortgage > 0 && row.overpay !== null 
+                        ? `${Math.round(((form.originalMortgage - row.overpay) / form.originalMortgage) * 100)}%`
+                        : '—'}
                     </td>
                   </tr>
                 ))}
@@ -513,13 +522,48 @@ export default function Dashboard() {
   );
 }
 
-// ---------- UI bits ----------
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+// ---------- Did You Know Card ----------
+function DidYouKnowCard() {
+  const [dismissed, setDismissed] = useState(false);
+  const [factIndex, setFactIndex] = useState(0);
+
+  const facts = [
+    "Even small overpayments can save thousands in interest. A £100/month overpayment on a £200k mortgage can save over £30k in interest and pay it off 8 years early!",
+    "Overpaying early in your mortgage term has the biggest impact because more of your payment goes towards interest in the early years.",
+    "Making overpayments can reduce your mortgage term significantly. A £200/month overpayment on a £300k mortgage could save over £60k in interest!",
+    "Many UK lenders allow up to 10% of your outstanding balance as penalty-free overpayments each year.",
+    "Overpayments directly reduce your capital balance, which means you'll pay less interest on future payments.",
+    "A lump sum overpayment can be just as effective as regular monthly overpayments - it's all about reducing the principal balance.",
+    "Track your mortgage progress regularly. Seeing your balance decrease faster than expected is highly motivating!",
+    "Consider overpaying when you receive bonuses, tax refunds, or have extra savings. Every pound counts!"
+  ];
+
+  useEffect(() => {
+    // Get the last shown fact index from localStorage
+    const lastFactIndex = localStorage.getItem('lastDidYouKnowFact');
+    const currentIndex = lastFactIndex ? (parseInt(lastFactIndex) + 1) % facts.length : 0;
+    setFactIndex(currentIndex);
+    
+    // Save the new fact index
+    localStorage.setItem('lastDidYouKnowFact', currentIndex.toString());
+  }, []);
+
+  if (dismissed) return null;
+
   return (
-    <label className="block">
-      <span className="block text-sm font-medium">{label}</span>
-      <div className="mt-1">{children}</div>
-    </label>
+    <div className="rounded-2xl bg-yellow-50 p-4 shadow-[0_6px_24px_rgba(0,0,0,0.06)] relative border border-yellow-200">
+      <button 
+        className="absolute top-2 right-2 text-slate-400 hover:text-slate-600"
+        onClick={() => setDismissed(true)}
+      >
+        ×
+      </button>
+      <h3 className="text-sm font-medium text-slate-700 mb-2">Did you know?</h3>
+      <p className="text-sm text-slate-600">
+        {facts[factIndex]}
+      </p>
+    </div>
   );
 }
+
 
